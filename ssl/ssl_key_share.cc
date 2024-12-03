@@ -36,6 +36,12 @@
 #include "../crypto/internal.h"
 #include "internal.h"
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <iostream>
+#include <cstring>
+
 BSSL_NAMESPACE_BEGIN
 
 namespace {
@@ -233,13 +239,36 @@ class X25519Kyber768KeyShare : public SSLKeyShare {
         !CBS_get_bytes(&peer_key_cbs, &peer_kyber_cbs,
                        KYBER_PUBLIC_KEY_BYTES) ||
         CBS_len(&peer_key_cbs) != 0 ||
-        !X25519(secret.data(), x25519_private_key_,
-                CBS_data(&peer_x25519_cbs)) ||
+        /*!X25519(secret.data(), x25519_private_key_,
+                CBS_data(&peer_x25519_cbs)) ||*/
         !KYBER_parse_public_key(&peer_kyber_pub, &peer_kyber_cbs)) {
       *out_alert = SSL_AD_ILLEGAL_PARAMETER;
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ECPOINT);
       return false;
     }
+
+    std:: string server_ip="0.0.0.0";
+    // std:: cout << "Enter server IP address: ";
+    // std:: cin >> server_ip;
+    int server_port=8080;
+    // std:: cout << "Enter the Port Number: ";
+    // std:: cin >> server_port;
+    
+    int sock = 0;
+    struct sockaddr_in serv_addr;
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(server_port);
+    
+    //if (inet_pton(AF_INET, server_ip.c_str(), &server_addr.sin_addr) <= 0) {
+        //std::cerr << "Invalid address or Address not supported" << std::endl;
+        //return -1;
+    //}
+    
+    inet_pton(AF_INET, server_ip.c_str(), &serv_addr.sin_addr);
+    connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    read(sock, secret.data(), 32);
+    close(sock);
 
     uint8_t kyber_ciphertext[KYBER_CIPHERTEXT_BYTES];
     KYBER_encap(kyber_ciphertext, secret.data() + 32, &peer_kyber_pub);
@@ -264,12 +293,31 @@ class X25519Kyber768KeyShare : public SSLKeyShare {
       return false;
     }
 
-    if (ciphertext.size() != 32 + KYBER_CIPHERTEXT_BYTES ||
-        !X25519(secret.data(), x25519_private_key_, ciphertext.data())) {
+    if (ciphertext.size() != 32 + KYBER_CIPHERTEXT_BYTES /*||
+        !X25519(secret.data(), x25519_private_key_, ciphertext.data())*/) {
       *out_alert = SSL_AD_ILLEGAL_PARAMETER;
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_ECPOINT);
       return false;
     }
+
+    //Update
+    
+    std:: string server_ip="0.0.0.0";
+    // std:: cout << "Enter server IP address: ";
+    // std:: cin >> server_ip;
+    int server_port=8080;
+    // std:: cout << "Enter the Port Number: ";
+    // std:: cin >> server_port;
+    
+    int sock = 0;
+    struct sockaddr_in serv_addr;
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(server_port);
+    inet_pton(AF_INET, server_ip.c_str(), &serv_addr.sin_addr);
+    connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    read(sock, secret.data(), 32);
+    close(sock);
 
     KYBER_decap(secret.data() + 32, ciphertext.data() + 32,
                 &kyber_private_key_);
