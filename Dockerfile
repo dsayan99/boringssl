@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     golang \
     g++ \
+    python3\
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory to /boringssl
@@ -21,7 +22,7 @@ RUN cmake -GNinja -B build && \
     ninja -C build
 
 # Compile the server.cpp file
-RUN g++ -o server server.cpp -L/boringssl/build/crypto -I/boringssl/include -lcrypto -lpthread
+RUN python3 QKDFetch.py
 
 # Expose port 8080
 EXPOSE 8080
